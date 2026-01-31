@@ -13,18 +13,19 @@ bazel_dep(name = "aspect_bazel_lib", version = "2.21.2")
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
     name = "cgo_amd64_base",
-    image = "gcr.io/distroless/base-nossl-debian12",
+    image = "gcr.io/distroless/base-debian12",
     # See https://github.com/buchgr/bazel-remote/issues/605 and https://github.com/GoogleContainerTools/distroless/issues/1098
     # TODO: specify this by digest instead? Where can I find that?
     reproducible = False,
-    tag = "nonroot-amd64",
+    tag = "debug-nonroot-amd64",
 )
 use_repo(oci, "cgo_amd64_base")
+
 oci.pull(
     name = "cgo_arm64_base",
-    image = "gcr.io/distroless/base-nossl-debian12",
+    image = "gcr.io/distroless/base-debian12",
     reproducible = False,
-    tag = "nonroot-arm64",
+    tag = "debug-nonroot-arm64",
 )
 use_repo(oci, "cgo_arm64_base")
 
@@ -102,6 +103,10 @@ use_repo(
     go_deps,
     "com_github_abbot_go_http_auth",
     "com_github_aws_aws_sdk_go",
+    "com_github_aws_aws_sdk_go_v2",
+    "com_github_aws_aws_sdk_go_v2_config",
+    "com_github_aws_aws_sdk_go_v2_service_s3",
+    "com_github_aws_smithy_go",
     "com_github_azure_azure_sdk_for_go_sdk_azcore",
     "com_github_azure_azure_sdk_for_go_sdk_azidentity",
     "com_github_azure_azure_sdk_for_go_sdk_storage_azblob",
@@ -114,7 +119,6 @@ use_repo(
     "com_github_jmespath_go_jmespath_internal_testify",
     "com_github_johannesboyne_gofakes3",
     "com_github_klauspost_compress",
-    "com_github_minio_minio_go_v7",
     "com_github_mostynb_go_grpc_compression",
     "com_github_mostynb_zstdpool_syncpool",
     "com_github_prometheus_client_golang",

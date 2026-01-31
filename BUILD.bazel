@@ -118,7 +118,7 @@ pkg_tar(
 
 oci_image(
     name = "bazel-remote-image",
-    base = "@cgo_amd64_base",  # Does not include openssl.
+    base = "@cgo_amd64_base",  # Debug variant with busybox shell and CA certs.
     entrypoint = [
         "/bazel-remote-linux-amd64",
         "--http_address=:8080",
@@ -151,7 +151,7 @@ pkg_tar(
 
 oci_image(
     name = "bazel-remote-image-arm64",
-    base = "@cgo_arm64_base",  # Does not include openssl.
+    base = "@cgo_arm64_base",  # Debug variant with busybox shell and CA certs.
     entrypoint = [
         "/bazel-remote-linux-arm64",
         "--http_address=:8080",

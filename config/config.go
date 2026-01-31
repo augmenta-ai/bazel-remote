@@ -17,7 +17,6 @@ import (
 
 	"github.com/buchgr/bazel-remote/v2/cache"
 	"github.com/buchgr/bazel-remote/v2/cache/azblobproxy"
-	"github.com/buchgr/bazel-remote/v2/cache/s3proxy"
 
 	"github.com/urfave/cli/v2"
 	yaml "gopkg.in/yaml.v3"
@@ -422,26 +421,7 @@ func validateConfig(c *Config) error {
 	}
 
 	if c.S3CloudStorage != nil {
-		if !s3proxy.IsValidAuthMethod(c.S3CloudStorage.AuthMethod) {
-			return fmt.Errorf("invalid s3.auth_method: %s", c.S3CloudStorage.AuthMethod)
-		}
-
-		if c.S3CloudStorage.KeyVersion != nil && *c.S3CloudStorage.KeyVersion != 2 {
-			return fmt.Errorf("s3.key_version (deprecated) must be 2, found %d", c.S3CloudStorage.KeyVersion)
-		}
-
-		if c.S3CloudStorage.BucketLookupType != "" && c.S3CloudStorage.BucketLookupType != "auto" &&
-			c.S3CloudStorage.BucketLookupType != "dns" && c.S3CloudStorage.BucketLookupType != "path" {
-			return fmt.Errorf("s3.bucket_lookup_type must be one of: \"auto\", \"dns\", \"path\" or empty/unspecified, found: \"%s\"",
-				c.S3CloudStorage.BucketLookupType)
-		}
-
-		if c.S3CloudStorage.SignatureType != "" && c.S3CloudStorage.SignatureType != "v2" &&
-			c.S3CloudStorage.SignatureType != "v4" && c.S3CloudStorage.SignatureType != "v4streaming" &&
-			c.S3CloudStorage.SignatureType != "anonymous" {
-			return fmt.Errorf("s3.signature_type must be one of: \"v2\", \"v4\", \"v4streaming\", \"anonymous\" or empty/unspecified, found: \"%s\"",
-				c.S3CloudStorage.SignatureType)
-		}
+		// No auth method validation needed - AWS SDK handles all authentication
 	}
 
 	if c.AzBlobConfig != nil {
@@ -557,22 +537,12 @@ func get(ctx *cli.Context) (*Config, error) {
 	var s3 *S3CloudStorageConfig
 	if ctx.String("s3.bucket") != "" {
 		s3 = &S3CloudStorageConfig{
-			Endpoint:                 ctx.String("s3.endpoint"),
-			Bucket:                   ctx.String("s3.bucket"),
-			BucketLookupType:         ctx.String("s3.bucket_lookup_type"),
-			Prefix:                   ctx.String("s3.prefix"),
-			AuthMethod:               ctx.String("s3.auth_method"),
-			AccessKeyID:              ctx.String("s3.access_key_id"),
-			SecretAccessKey:          ctx.String("s3.secret_access_key"),
-			SessionToken:             ctx.String("s3.session_token"),
-			SignatureType:            ctx.String("s3.signature_type"),
-			DisableSSL:               ctx.Bool("s3.disable_ssl"),
-			UpdateTimestamps:         ctx.Bool("s3.update_timestamps"),
-			IAMRoleEndpoint:          ctx.String("s3.iam_role_endpoint"),
-			Region:                   ctx.String("s3.region"),
-			AWSProfile:               ctx.String("s3.aws_profile"),
-			AWSSharedCredentialsFile: ctx.String("s3.aws_shared_credentials_file"),
-			MaxIdleConns:             ctx.Int("s3.max_idle_conns"),
+			Endpoint:         ctx.String("s3.endpoint"),
+			Bucket:           ctx.String("s3.bucket"),
+			Prefix:           ctx.String("s3.prefix"),
+			DisableSSL:       ctx.Bool("s3.disable_ssl"),
+			UpdateTimestamps: ctx.Bool("s3.update_timestamps"),
+			Region:           ctx.String("s3.region"),
 		}
 	}
 

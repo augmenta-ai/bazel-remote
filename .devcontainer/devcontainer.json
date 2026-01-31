@@ -1,0 +1,65 @@
+{
+  "name": "bazel-remote",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.24"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": true,
+      "installDockerBuildx": true,
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "installOhMyZsh": true,
+      "configureZshAsDefaultShell": true,
+      "username": "vscode",
+      "userUid": "1000",
+      "userGid": "1000"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    }
+  },
+  "postCreateCommand": "\
+    wget -q https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64 -O /tmp/bazelisk && \
+    chmod +x /tmp/bazelisk && \
+    sudo mv /tmp/bazelisk /usr/local/bin/bazel && \
+    sudo apt-get update && \
+    sudo apt-get install -y build-essential python3 && \
+    git config --global --add safe.directory ${containerWorkspaceFolder}\
+  ",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "BazelBuild.vscode-bazel",
+        "GitHub.copilot",
+        "GitHub.copilot-chat"
+      ],
+      "settings": {
+        "go.toolsManagement.checkForUpdates": "local",
+        "go.useLanguageServer": true,
+        "go.gopath": "/go",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "explicit"
+        }
+      }
+    }
+  },
+  "remoteEnv": {
+    "GO111MODULE": "on",
+    "GOPATH": "/go"
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached"
+  ],
+  "forwardPorts": [
+    8080,
+    9092
+  ],
+  "postStartCommand": "echo 'bazel-remote devcontainer ready!'",
+  "remoteUser": "vscode"
+}

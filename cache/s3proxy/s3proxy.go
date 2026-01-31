@@ -8,18 +8,19 @@ import (
 	"log"
 	"path"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go"
 	"github.com/buchgr/bazel-remote/v2/cache"
 	"github.com/buchgr/bazel-remote/v2/cache/disk/casblob"
 	"github.com/buchgr/bazel-remote/v2/utils/backendproxy"
-
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type s3Cache struct {
-	mcore            *minio.Core
+	s3Client         *s3.Client
 	prefix           string
 	bucket           string
 	uploadQueue      chan<- backendproxy.UploadReq
@@ -46,51 +47,48 @@ var errNotFound = errors.New("NOT FOUND")
 
 // New returns a new instance of the S3-API based cache
 func New(
-	// S3CloudStorageConfig struct fields:
 	Endpoint string,
 	Bucket string,
-	BucketLookupType minio.BucketLookupType,
 	Prefix string,
-	Credentials *credentials.Credentials,
 	DisableSSL bool,
 	UpdateTimestamps bool,
 	Region string,
-	MaxIdleConns int,
 
 	storageMode string, accessLogger cache.Logger,
 	errorLogger cache.Logger, numUploaders, maxQueuedUploads int) cache.Proxy {
 
-	fmt.Println("Using S3 backend.")
+	fmt.Println("Using S3 backend with AWS SDK.")
 
-	var minioCore *minio.Core
-	var err error
+	ctx := context.Background()
 
-	if Credentials == nil {
-		log.Fatalf("Failed to determine s3proxy credentials")
+	// Load AWS configuration using the default credential chain
+	// This supports: environment variables, shared credentials file, IAM roles, SSO, etc.
+	var opts []func(*config.LoadOptions) error
+
+	if Region != "" {
+		opts = append(opts, config.WithRegion(Region))
 	}
 
-	secure := !DisableSSL
-	tr, err := minio.DefaultTransport(secure)
+	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
-		log.Fatalf("Failed to create default minio transport: %v", err)
+		log.Fatalf("Failed to load AWS config: %v", err)
 	}
 
-	tr.MaxIdleConns = MaxIdleConns
-	tr.MaxIdleConnsPerHost = MaxIdleConns
-
-	// Initialize minio client with credentials
-	opts := &minio.Options{
-		Creds:        Credentials,
-		BucketLookup: BucketLookupType,
-
-		Region:    Region,
-		Secure:    secure,
-		Transport: tr,
+	// Create S3 client
+	s3ClientOpts := func(o *s3.Options) {
+		if Endpoint != "" {
+			o.BaseEndpoint = aws.String(Endpoint)
+			// For custom endpoints, use path-style addressing
+			o.UsePathStyle = true
+		}
+		if DisableSSL {
+			// Note: AWS SDK v2 doesn't have a direct DisableSSL option
+			// Custom endpoints should use http:// scheme
+			log.Println("Warning: disable_ssl is deprecated. Use http:// in endpoint instead.")
+		}
 	}
-	minioCore, err = minio.NewCore(Endpoint, opts)
-	if err != nil {
-		log.Fatalln(err)
-	}
+
+	s3Client := s3.NewFromConfig(cfg, s3ClientOpts)
 
 	if storageMode != "zstd" && storageMode != "uncompressed" {
 		log.Fatalf("Unsupported storage mode for the s3proxy backend: %q, must be one of \"zstd\" or \"uncompressed\"",
@@ -98,7 +96,7 @@ func New(
 	}
 
 	c := &s3Cache{
-		mcore:            minioCore,
+		s3Client:         s3Client,
 		prefix:           Prefix,
 		bucket:           Bucket,
 		accessLogger:     accessLogger,
@@ -157,20 +155,16 @@ func logResponse(log cache.Logger, method, bucket, key string, err error) {
 }
 
 func (c *s3Cache) UploadFile(item backendproxy.UploadReq) {
-	_, err := c.mcore.PutObject(
-		context.Background(),
-		c.bucket,                          // bucketName
-		c.objectKey(item.Hash, item.Kind), // objectName
-		item.Rc,                           // reader
-		item.SizeOnDisk,                   // objectSize
-		"",                                // md5base64
-		"",                                // sha256
-		minio.PutObjectOptions{
-			UserMetadata: map[string]string{
-				"Content-Type": "application/octet-stream",
-			},
-		}, // metadata
-	)
+	ctx := context.Background()
+	
+	contentType := "application/octet-stream"
+	
+	_, err := c.s3Client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(c.bucket),
+		Key:         aws.String(c.objectKey(item.Hash, item.Kind)),
+		Body:        item.Rc,
+		ContentType: aws.String(contentType),
+	})
 
 	logResponse(c.accessLogger, "UPLOAD", c.bucket, c.objectKey(item.Hash, item.Kind), err)
 
@@ -198,35 +192,34 @@ func (c *s3Cache) Put(ctx context.Context, kind cache.EntryKind, hash string, lo
 }
 
 func (c *s3Cache) UpdateModificationTimestamp(ctx context.Context, bucket string, object string) {
-	src := minio.CopySrcOptions{
-		Bucket: bucket,
-		Object: object,
-	}
+	// Copy the object to itself to update the modification timestamp
+	copySource := fmt.Sprintf("%s/%s", bucket, object)
+	
+	_, err := c.s3Client.CopyObject(ctx, &s3.CopyObjectInput{
+		Bucket:     aws.String(bucket),
+		Key:        aws.String(object),
+		CopySource: aws.String(copySource),
+	})
 
-	dst := minio.CopyDestOptions{
-		Bucket:          bucket,
-		Object:          object,
-		ReplaceMetadata: true,
-	}
-
-	_, err := c.mcore.ComposeObject(context.Background(), dst, src)
-
-	logResponse(c.accessLogger, "COMPOSE", bucket, object, err)
+	logResponse(c.accessLogger, "COPY", bucket, object, err)
 }
 
 func (c *s3Cache) Get(ctx context.Context, kind cache.EntryKind, hash string, _ int64) (io.ReadCloser, int64, error) {
 
-	rc, info, _, err := c.mcore.GetObject(
-		ctx,
-		c.bucket,                 // bucketName
-		c.objectKey(hash, kind),  // objectName
-		minio.GetObjectOptions{}, // opts
-	)
+	result, err := c.s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(c.objectKey(hash, kind)),
+	})
+	
 	if err != nil {
-		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
-			cacheMisses.Inc()
-			logResponse(c.accessLogger, "DOWNLOAD", c.bucket, c.objectKey(hash, kind), errNotFound)
-			return nil, -1, nil
+		// Check if error is NoSuchKey
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
+			if apiErr.ErrorCode() == "NoSuchKey" {
+				cacheMisses.Inc()
+				logResponse(c.accessLogger, "DOWNLOAD", c.bucket, c.objectKey(hash, kind), errNotFound)
+				return nil, -1, nil
+			}
 		}
 		cacheMisses.Inc()
 		logResponse(c.accessLogger, "DOWNLOAD", c.bucket, c.objectKey(hash, kind), err)
@@ -241,28 +234,33 @@ func (c *s3Cache) Get(ctx context.Context, kind cache.EntryKind, hash string, _ 
 	logResponse(c.accessLogger, "DOWNLOAD", c.bucket, c.objectKey(hash, kind), nil)
 
 	if kind == cache.CAS && c.v2mode {
-		return casblob.ExtractLogicalSize(rc)
+		return casblob.ExtractLogicalSize(result.Body)
 	}
 
-	return rc, info.Size, nil
+	size := int64(-1)
+	if result.ContentLength != nil {
+		size = *result.ContentLength
+	}
+
+	return result.Body, size, nil
 }
 
 func (c *s3Cache) Contains(ctx context.Context, kind cache.EntryKind, hash string, _ int64) (bool, int64) {
 	size := int64(-1)
 	exists := false
 
-	s, err := c.mcore.StatObject(
-		ctx,
-		c.bucket,                  // bucketName
-		c.objectKey(hash, kind),   // objectName
-		minio.StatObjectOptions{}, // opts
-	)
+	result, err := c.s3Client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(c.objectKey(hash, kind)),
+	})
 
 	exists = (err == nil)
 	if err != nil {
 		err = errNotFound
 	} else if kind != cache.CAS || !c.v2mode {
-		size = s.Size
+		if result.ContentLength != nil {
+			size = *result.ContentLength
+		}
 	}
 
 	logResponse(c.accessLogger, "CONTAINS", c.bucket, c.objectKey(hash, kind), err)

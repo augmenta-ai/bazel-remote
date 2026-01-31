@@ -8,14 +8,9 @@ import (
 
 	"github.com/buchgr/bazel-remote/v2/cache/azblobproxy"
 	"github.com/buchgr/bazel-remote/v2/cache/disk/zstdimpl"
-	"github.com/buchgr/bazel-remote/v2/cache/s3proxy"
 
 	"github.com/urfave/cli/v2"
 )
-
-func s3AuthMsg(authMethods ...string) string {
-	return fmt.Sprintf("Applies to s3 auth method(s): %s.", strings.Join(authMethods, ", "))
-}
 
 func azBlobAuthMsg(authMethods ...string) string {
 	return fmt.Sprintf("Applies to AzBlob auth method(s): %s.", strings.Join(authMethods, ", "))
@@ -327,59 +322,14 @@ func GetCliFlags() []cli.Flag {
 			EnvVars: []string{"BAZEL_REMOTE_S3_BUCKET"},
 		},
 		&cli.StringFlag{
-			Name:    "s3.bucket_lookup_type",
-			Value:   "auto",
-			Usage:   "The S3/minio bucket lookup type to use when using S3 proxy backend. Allowed values: auto, dns, path.",
-			EnvVars: []string{"BAZEL_REMOTE_S3_BUCKET_LOOKUP_TYPE"},
-		},
-		&cli.StringFlag{
 			Name:    "s3.prefix",
 			Value:   "",
 			Usage:   "The S3/minio object prefix to use when using S3 proxy backend.",
 			EnvVars: []string{"BAZEL_REMOTE_S3_PREFIX"},
 		},
-		&cli.StringFlag{
-			Name:    "s3.auth_method",
-			Value:   "",
-			Usage:   fmt.Sprintf("The S3/minio authentication method. This argument is required when an s3 proxy backend is used. Allowed values: %s.", strings.Join(s3proxy.GetAuthMethods(), ", ")),
-			EnvVars: []string{"BAZEL_REMOTE_S3_AUTH_METHOD"},
-		},
-		&cli.StringFlag{
-			Name:    "s3.access_key_id",
-			Value:   "",
-			Usage:   "The S3/minio access key to use when using S3 proxy backend. " + s3AuthMsg(s3proxy.AuthMethodAccessKey),
-			EnvVars: []string{"BAZEL_REMOTE_S3_ACCESS_KEY_ID"},
-		},
-		&cli.StringFlag{
-			Name:    "s3.secret_access_key",
-			Value:   "",
-			Usage:   "The S3/minio secret access key to use when using S3 proxy backend. " + s3AuthMsg(s3proxy.AuthMethodAccessKey),
-			EnvVars: []string{"BAZEL_REMOTE_S3_SECRET_ACCESS_KEY"},
-		},
-		&cli.StringFlag{
-			Name:    "s3.session_token",
-			Value:   "",
-			Usage:   "The S3/minio session token to use when using S3 proxy backend. Optional. " + s3AuthMsg(s3proxy.AuthMethodAccessKey),
-			EnvVars: []string{"BAZEL_REMOTE_S3_SESSION_TOKEN"},
-		},
-		&cli.StringFlag{
-			Name:        "s3.signature_type",
-			Usage:       "Which type of s3 signature to use when using S3 proxy backend. Only applies when using the s3 access_key auth method. Allowed values: v2, v4, v4streaming, anonymous.",
-			DefaultText: "v4",
-			EnvVars:     []string{"BAZEL_REMOTE_S3_SIGNATURE_TYPE"},
-		},
-		&cli.StringFlag{
-			Name:    "s3.aws_shared_credentials_file",
-			Value:   "",
-			Usage:   "Path to the AWS credentials file. If not specified, the minio client will default to '~/.aws/credentials'. " + s3AuthMsg(s3proxy.AuthMethodAWSCredentialsFile),
-			EnvVars: []string{"BAZEL_REMOTE_S3_AWS_SHARED_CREDENTIALS_FILE", "AWS_SHARED_CREDENTIALS_FILE"},
-		},
-		&cli.StringFlag{
-			Name:    "s3.aws_profile",
-			Value:   "default",
-			Usage:   "The aws credentials profile to use from within s3.aws_shared_credentials_file. " + s3AuthMsg(s3proxy.AuthMethodAWSCredentialsFile),
-			EnvVars: []string{"BAZEL_REMOTE_S3_AWS_PROFILE", "AWS_PROFILE"},
-		},
+		// Note: AWS SDK v2 handles authentication automatically using the standard
+		// credential chain (environment variables, shared credentials, IAM roles, SSO, etc.)
+		// No explicit auth configuration flags are needed.
 		&cli.BoolFlag{
 			Name:        "s3.disable_ssl",
 			Usage:       "Whether to disable TLS/SSL when using the S3 proxy backend.",
@@ -392,31 +342,14 @@ func GetCliFlags() []cli.Flag {
 			DefaultText: "false",
 			EnvVars:     []string{"BAZEL_REMOTE_S3_UPDATE_TIMESTAMPS"},
 		},
-		&cli.StringFlag{
-			Name:    "s3.iam_role_endpoint",
-			Value:   "",
-			Usage:   "Endpoint for using IAM security credentials. By default it will look for credentials in the standard locations for the AWS platform. " + s3AuthMsg(s3proxy.AuthMethodIAMRole),
-			EnvVars: []string{"BAZEL_REMOTE_S3_IAM_ROLE_ENDPOINT"},
-		},
+
 		&cli.StringFlag{
 			Name:    "s3.region",
 			Value:   "",
 			Usage:   "The AWS region. Required when not specifying S3/minio access keys.",
 			EnvVars: []string{"BAZEL_REMOTE_S3_REGION"},
 		},
-		&cli.IntFlag{
-			Name:        "s3.key_version",
-			Usage:       "DEPRECATED. Key version 2 now is the only supported value. This flag will be removed.",
-			Value:       2,
-			DefaultText: "2",
-			EnvVars:     []string{"BAZEL_REMOTE_S3_KEY_VERSION"},
-		},
-		&cli.IntFlag{
-			Name:        "s3.max_idle_conns",
-			Usage:       "The maximum number of idle connections to use when using the S3 proxy backend.",
-			DefaultText: "1024",
-			EnvVars:     []string{"BAZEL_REMOTE_S3_MAX_IDLE_CONNS"},
-		},
+
 		&cli.StringFlag{
 			Name:    "azblob.tenant_id",
 			Value:   "",
