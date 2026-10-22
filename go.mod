@@ -8,17 +8,17 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/klauspost/compress v1.18.3
+	github.com/klauspost/compress v1.20.1
 	github.com/mostynb/go-grpc-compression v1.2.3
 	github.com/mostynb/zstdpool-syncpool v0.0.13
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/slok/go-http-metrics v0.13.0
 	github.com/urfave/cli/v2 v2.27.7
-	golang.org/x/oauth2 v0.34.0
-	golang.org/x/sync v0.19.0
-	golang.org/x/sys v0.40.0 // indirect
-	google.golang.org/grpc v1.78.0
+	golang.org/x/oauth2 v0.36.0
+	golang.org/x/sync v0.24.0
+	golang.org/x/sys v0.49.0 // indirect
+	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -33,16 +33,16 @@ require (
 	github.com/aws/smithy-go v1.24.0
 	github.com/go-ldap/ldap/v3 v3.4.12
 	github.com/johannesboyne/gofakes3 v0.0.0-20230506070712-04da935ef877
-	github.com/valyala/gozstd v1.24.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20260114163908-3f89685c29c3
+	github.com/valyala/gozstd v1.26.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20260706201446-f0a921348800
 	google.golang.org/genproto/googleapis/bytestream v0.0.0-20260114163908-3f89685c29c3
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260114163908-3f89685c29c3
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260720211330-0afa2a65878a
 )
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2 // indirect
-	github.com/Azure/go-ntlmssp v0.1.0 // indirect
+	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.256 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.4 // indirect
@@ -75,12 +75,10 @@ require (
 	github.com/shabbyrobe/gocovmerge v0.0.0-20190829150210-3e036491d500 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
-	golang.org/x/crypto v0.47.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/tools v0.51.0 // indirect
 )
 
-go 1.24.0
-
-toolchain go1.24.2
+go 1.26.0
