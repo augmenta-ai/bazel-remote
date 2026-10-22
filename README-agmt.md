@@ -86,6 +86,7 @@ This requires a shell (`sh`) to execute the credential command, which is provide
 **Files Modified:**
 - `MODULE.bazel` - Both `oci.pull()` entries
 - `MODULE.bazel.lock` - The `oci` extension entries
+- `docker/push_to_ecr` - New. Checks the image and pushes it to ECR. See below.
 
 **After:**
 ```starlark
@@ -111,29 +112,24 @@ No workflow publishes the image, and the `push_to_dockerhub_*` targets in `BUILD
    bazel run //:bazel-remote-image-tarball
    ```
    The devcontainer uses the host's Docker, so this loads `buchgr/bazel-remote-cache:tmp-amd64` on the host.
-3. Check the image on the host before you push it. The first command must print the Go version that `go_sdk.download()` names in `MODULE.bazel`. The second must show `"cgo"` among the supported zstd implementations. The last two must each print 0.
+3. On the host, check the image, then push it. The devcontainer has no AWS CLI, so this step cannot run there. Run it from the same clean checkout:
    ```
-   docker create --name br-check buchgr/bazel-remote-cache:tmp-amd64
-   docker cp br-check:/bazel-remote-linux-amd64 . && docker cp -L br-check:/etc/ssl/certs/ca-certificates.crt .
-   docker rm br-check
-   go version bazel-remote-linux-amd64
-   docker run --rm buchgr/bazel-remote-cache:tmp-amd64 -h | grep zstd_implementation
-   openssl crl2pkcs7 -nocrl -certfile ca-certificates.crt | openssl pkcs7 -print_certs -noout | grep -c 'emSign ECC Root CA - G3'
-   openssl crl2pkcs7 -nocrl -certfile ca-certificates.crt | openssl pkcs7 -print_certs -noout | grep -c 'AAA Certificate Services'
+   docker/push_to_ecr --dry-run
+   docker/push_to_ecr
    ```
-4. The devcontainer has no AWS CLI, so push from the host, with AWS CLI 2.38.4 or later. `SHA` is the short hash of the commit you built:
-   ```
-   SHA=$(git rev-parse --short=7 HEAD)
-   docker tag buchgr/bazel-remote-cache:tmp-amd64 650765441893.dkr.ecr.us-east-2.amazonaws.com/buchgr/bazel-remote-cache:agmt1-$SHA
-   aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 650765441893.dkr.ecr.us-east-2.amazonaws.com
-   docker push 650765441893.dkr.ecr.us-east-2.amazonaws.com/buchgr/bazel-remote-cache:agmt1-$SHA
-   ```
-5. agmt-bootstrap's driver names the bazel-remote image tag that it starts by default. After the push, move it to the new tag.
+   The script stops before it pushes unless all of these hold:
+   - The image's startup log says it was built with the Go version that `go_sdk.download()` names in `MODULE.bazel`, from the checked-out commit.
+   - `-h` lists `"cgo"` among the supported zstd implementations.
+   - The image's CA bundle holds neither `emSign ECC Root CA - G3` nor `AAA Certificate Services`.
+   - Docker Engine is 29.9.2 or later and AWS CLI is 2.38.4 or later. Older releases of both trust the compromised chains, and both send the ECR credential.
+
+   It then tags the image `agmt1-<short sha>`, logs in to ECR, pushes, and prints the image's ECR digest. `--dry-run` runs the checks and stops. The ECR repository's tags are immutable, so a pushed tag cannot be pushed again.
+4. agmt-bootstrap's driver names the bazel-remote image tag that it starts by default. After the push, move it to the new tag.
 
 ## Impact
 
 ### Container Image
-- **Size:** +7MB (44.2MB → 51.3MB for amd64)
+- **Size:** 55.9MB for amd64. The debug variant took it from 44.2MB to 51.3MB, and Debian 13 adds about 3.6MB.
 - **Functionality:** Added shell and debugging utilities via busybox
 - **Security:** Slightly increased attack surface (debug variant trade-off)
 - **Operations:** Improved troubleshooting capabilities
