@@ -13,18 +13,20 @@ bazel_dep(name = "aspect_bazel_lib", version = "2.21.2")
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
     name = "cgo_amd64_base",
-    image = "gcr.io/distroless/base-debian12",
     # See https://github.com/buchgr/bazel-remote/issues/605 and https://github.com/GoogleContainerTools/distroless/issues/1098
-    # TODO: specify this by digest instead? Where can I find that?
-    reproducible = False,
+    # Pinned by digest; the tag only records where the digest came from.
+    # To update, read the tag's current digest with
+    # `docker buildx imagetools inspect gcr.io/distroless/base-debian13:debug-nonroot-amd64`.
+    digest = "sha256:343e68d5845d6b254616c819b0ac0d12e823090ebc08f34daa9072fd03f67c23",
+    image = "gcr.io/distroless/base-debian13",
     tag = "debug-nonroot-amd64",
 )
 use_repo(oci, "cgo_amd64_base")
 
 oci.pull(
     name = "cgo_arm64_base",
-    image = "gcr.io/distroless/base-debian12",
-    reproducible = False,
+    digest = "sha256:cc0ab6d932c4331d73b98c121e795d556bf878de19a0e816b018d832090d4503",
+    image = "gcr.io/distroless/base-debian13",
     tag = "debug-nonroot-arm64",
 )
 use_repo(oci, "cgo_arm64_base")

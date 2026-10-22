@@ -335,7 +335,7 @@
     "@@rules_oci+//oci:extensions.bzl%oci": {
       "general": {
         "bzlTransitiveDigest": "9C6S4aKOj7VEBQHMJcXCY43Z3fqAl44H4X8PKsdA0/8=",
-        "usagesDigest": "ljebhNlp8FlTBVJ/eJKI0bPD+4ECwmY7/054WoKSFsg=",
+        "usagesDigest": "TznY4xWqJEodtpCiUPGCyV6oGo003l5xwNfJxX6fvbs=",
         "recordedInputs": [
           "REPO_MAPPING:aspect_bazel_lib+,bazel_tools bazel_tools",
           "REPO_MAPPING:bazel_features+,bazel_tools bazel_tools",
@@ -350,8 +350,8 @@
               "www_authenticate_challenges": {},
               "scheme": "https",
               "registry": "gcr.io",
-              "repository": "distroless/base-debian12",
-              "identifier": "debug-nonroot-amd64",
+              "repository": "distroless/base-debian13",
+              "identifier": "sha256:343e68d5845d6b254616c819b0ac0d12e823090ebc08f34daa9072fd03f67c23",
               "target_name": "cgo_amd64_base_single",
               "bazel_tags": []
             }
@@ -363,11 +363,11 @@
               "www_authenticate_challenges": {},
               "scheme": "https",
               "registry": "gcr.io",
-              "repository": "distroless/base-debian12",
-              "identifier": "debug-nonroot-amd64",
+              "repository": "distroless/base-debian13",
+              "identifier": "sha256:343e68d5845d6b254616c819b0ac0d12e823090ebc08f34daa9072fd03f67c23",
               "platform": "@@rules_oci+//oci:cgo_amd64_base_single",
               "bzlmod_repository": "cgo_amd64_base",
-              "reproducible": false
+              "reproducible": true
             }
           },
           "cgo_arm64_base_single": {
@@ -376,8 +376,8 @@
               "www_authenticate_challenges": {},
               "scheme": "https",
               "registry": "gcr.io",
-              "repository": "distroless/base-debian12",
-              "identifier": "debug-nonroot-arm64",
+              "repository": "distroless/base-debian13",
+              "identifier": "sha256:cc0ab6d932c4331d73b98c121e795d556bf878de19a0e816b018d832090d4503",
               "target_name": "cgo_arm64_base_single",
               "bazel_tags": []
             }
@@ -389,11 +389,11 @@
               "www_authenticate_challenges": {},
               "scheme": "https",
               "registry": "gcr.io",
-              "repository": "distroless/base-debian12",
-              "identifier": "debug-nonroot-arm64",
+              "repository": "distroless/base-debian13",
+              "identifier": "sha256:cc0ab6d932c4331d73b98c121e795d556bf878de19a0e816b018d832090d4503",
               "platform": "@@rules_oci+//oci:cgo_arm64_base_single",
               "bzlmod_repository": "cgo_arm64_base",
-              "reproducible": false
+              "reproducible": true
             }
           },
           "oci_crane_darwin_amd64": {
