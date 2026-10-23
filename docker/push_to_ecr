@@ -37,11 +37,16 @@ docker run --rm "$image" --max_size=1 --idle_timeout=1s 2>&1 |
 docker run --rm "$image" -h | grep zstd_implementation | grep -q '"cgo"' ||
 	fail "$image does not support cgo zstd"
 bundle=$(mktemp)
-trap 'rm -f "$bundle"' EXIT
+container=
+cleanup() {
+	rm -f "$bundle"
+	[ -z "$container" ] || docker rm -f "$container" >/dev/null
+}
+trap cleanup EXIT
 container=$(docker create "$image")
 docker cp -L "$container:/etc/ssl/certs/ca-certificates.crt" "$bundle" >/dev/null
-docker rm "$container" >/dev/null
 subjects=$(openssl crl2pkcs7 -nocrl -certfile "$bundle" | openssl pkcs7 -print_certs -noout)
+[ -n "$subjects" ] || fail "the CA bundle in $image is empty"
 for root in 'emSign ECC Root CA - G3' 'AAA Certificate Services'; do
 	! grep -qF "$root" <<<"$subjects" || fail "the CA bundle still holds $root"
 done

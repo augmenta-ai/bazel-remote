@@ -87,6 +87,7 @@ This requires a shell (`sh`) to execute the credential command, which is provide
 - `MODULE.bazel` - Both `oci.pull()` entries
 - `MODULE.bazel.lock` - The `oci` extension entries
 - `docker/push_to_ecr` - New. Checks the image and pushes it to ECR. See below.
+- `.gitattributes` - New. Checks out every text file with LF line endings, whatever `core.autocrlf` says, so a checkout written by Windows git still builds and runs `docker/push_to_ecr`. A checkout made before this file keeps its CRLF files, and `git checkout -- .` does not convert them. Convert one with `git rm -r -q --cached . && git reset -q --hard`, which discards uncommitted changes, or clone again.
 
 **After:**
 ```starlark
