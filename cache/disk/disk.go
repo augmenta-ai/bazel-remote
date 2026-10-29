@@ -285,12 +285,6 @@ func (c *diskCache) Put(ctx context.Context, kind cache.EntryKind, hash string, 
 			if err != nil {
 				log.Printf("warning: failed to remove temp file: %q", blobFile)
 			}
-		} else if blobFile != "" {
-			// Mark the file as "complete".
-			err := os.Chmod(blobFile, tempfile.FinalMode)
-			if err != nil {
-				log.Println("failed to mark", blobFile, "as complete:", err)
-			}
 		}
 
 		if unreserve {
@@ -468,23 +462,29 @@ func (c *diskCache) availableOrTryProxy(kind cache.EntryKind, hash string, size 
 
 		if !isSizeMismatch(size, item.size) {
 			var f *os.File
+			fastPath := true
 			f, err = os.Open(blobPath)
 			if err != nil && os.IsNotExist(err) {
 				// Another request replaced the file before we could open it?
 				// Enter slow path.
+				fastPath = false
 
 				c.mu.Lock()
 				item, listElem = c.lru.Get(key)
 				if listElem != nil {
 					blobPath = path.Join(c.dir, c.FileLocation(kind, item.legacy, hash, item.size, item.random))
 					f, err = os.Open(blobPath)
+					if err != nil {
+						// We will log the error below, while not holding the lock.
+						c.lru.RemoveElement(listElem)
+					}
 				}
 				c.mu.Unlock()
 			}
 
 			if err != nil {
 				// Race condition, was the item purged after we released the lock?
-				log.Printf("Warning: expected %q to exist on disk, undersized cache?", blobPath)
+				log.Printf("Warning: expected %q to exist on disk (fast path: %t), undersized cache? Last reported error: %v", blobPath, fastPath, err)
 			} else if kind == cache.CAS {
 				var rc io.ReadCloser
 				if item.legacy {
@@ -627,12 +627,6 @@ func (c *diskCache) get(ctx context.Context, kind cache.EntryKind, hash string, 
 			err := os.Remove(blobFile)
 			if err != nil {
 				log.Printf("warning: failed to remove temp file: %q", blobFile)
-			}
-		} else if blobFile != "" {
-			// Mark the file as "complete".
-			err := os.Chmod(blobFile, tempfile.FinalMode)
-			if err != nil {
-				log.Println("failed to mark", blobFile, "as complete:", err)
 			}
 		}
 

@@ -1,7 +1,7 @@
 # https://registry.bazel.build/
 bazel_dep(name = "googleapis", version = "0.0.0-20240326-1c8d509c5")
-bazel_dep(name = "rules_go", version = "0.59.0", repo_name = "io_bazel_rules_go")
-bazel_dep(name = "gazelle", version = "0.47.0")
+bazel_dep(name = "rules_go", version = "0.63.0", repo_name = "io_bazel_rules_go")
+bazel_dep(name = "gazelle", version = "0.53.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "rules_pkg", version = "1.1.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
@@ -13,25 +13,27 @@ bazel_dep(name = "aspect_bazel_lib", version = "2.21.2")
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
     name = "cgo_amd64_base",
-    image = "gcr.io/distroless/base-debian12",
     # See https://github.com/buchgr/bazel-remote/issues/605 and https://github.com/GoogleContainerTools/distroless/issues/1098
-    # TODO: specify this by digest instead? Where can I find that?
-    reproducible = False,
+    # Pinned by digest; the tag only records where the digest came from.
+    # To update, read the tag's current digest with
+    # `docker buildx imagetools inspect gcr.io/distroless/base-debian13:debug-nonroot-amd64`.
+    digest = "sha256:343e68d5845d6b254616c819b0ac0d12e823090ebc08f34daa9072fd03f67c23",
+    image = "gcr.io/distroless/base-debian13",
     tag = "debug-nonroot-amd64",
 )
 use_repo(oci, "cgo_amd64_base")
 
 oci.pull(
     name = "cgo_arm64_base",
-    image = "gcr.io/distroless/base-debian12",
-    reproducible = False,
+    digest = "sha256:cc0ab6d932c4331d73b98c121e795d556bf878de19a0e816b018d832090d4503",
+    image = "gcr.io/distroless/base-debian13",
     tag = "debug-nonroot-arm64",
 )
 use_repo(oci, "cgo_arm64_base")
 
 # Download an SDK for the host OS & architecture as well as common remote execution platforms.
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.download(version = "1.25.6")
+go_sdk.download(version = "1.27.3")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
